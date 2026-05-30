@@ -1,0 +1,25 @@
+# Bin/Obj
+[Bb]in/
+[Oo]bj/
+*.dll
+*.exe
+*.pdb
+
+*.user
+*.suo
+*.cache
+*.log
+*.tmp
+*.DS_Store
+Thumbs.db
+
+.vscode/
+!.vscode/tasks.json
+!.vscode/launch.json
+
+Content/bin/
+Content/obj/
+
+.DS_Store
+ehthumbs.db
+Desktop.ini

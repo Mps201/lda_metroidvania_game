@@ -1,0 +1,24 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyMetroidvania", "MyMetroidvania.csproj", "{ACEDAE68-9801-51FB-DDD8-7B7A6E5F4191}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{ACEDAE68-9801-51FB-DDD8-7B7A6E5F4191}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ACEDAE68-9801-51FB-DDD8-7B7A6E5F4191}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ACEDAE68-9801-51FB-DDD8-7B7A6E5F4191}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ACEDAE68-9801-51FB-DDD8-7B7A6E5F4191}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {9AB3DA4D-3AB5-413C-BD4C-5B696B5ACEA4}
+	EndGlobalSection
+EndGlobal
