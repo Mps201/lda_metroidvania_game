@@ -1,6 +1,7 @@
+using System.Collections.Generic;
 using Microsoft.Xna.Framework;
-using lda.Models;
 using System;
+using lda.Models;
 
 namespace lda.Controllers
 {
@@ -8,13 +9,15 @@ namespace lda.Controllers
     {
         private readonly EnemyModel _model;
         private readonly PlayerModel _playerModel;
+        private readonly List<Rectangle> _colliders;
 
-        private const float DetectionRange = 200f; 
+        private const float DetectionRange = 250f;
 
-        public EnemyController(EnemyModel model, PlayerModel playerModel)
+        public EnemyController(EnemyModel model, PlayerModel playerModel, List<Rectangle> colliders)
         {
             _model = model;
             _playerModel = playerModel;
+            _colliders = colliders;
         }
 
         public void Update()
@@ -23,17 +26,14 @@ namespace lda.Controllers
 
             float distToPlayer = _playerModel.Position.X - _model.Position.X;
             float absDist = Math.Abs(distToPlayer);
-
             float heightDiff = Math.Abs(_playerModel.Position.Y - _model.Position.Y);
 
             if (absDist < DetectionRange && heightDiff < 100 && _playerModel.IsAlive)
             {
-                if (distToPlayer > 0) 
-                    _model.Direction = 1;
-                else 
-                    _model.Direction = -1;
+                if (distToPlayer > 0) _model.Direction = 1;
+                else _model.Direction = -1;
 
-                _model.SetVelocityX(_model.Direction * 3.5f); 
+                _model.SetVelocityX(_model.Direction * 3.5f);
             }
             else
             {
@@ -48,10 +48,20 @@ namespace lda.Controllers
 
         private bool IsGroundAhead()
         {
-            int checkX = _model.Direction == 1 ? _model.Bounds.Right + 5 : _model.Bounds.Left - 5;
-            Rectangle probe = new Rectangle(checkX, _model.Bounds.Bottom + 2, 10, 10);
+            if (_colliders == null) return true;
 
-            return true;
+            int checkX = _model.Direction == 1 ? _model.Bounds.Right + 4 : _model.Bounds.Left - 4;
+            int checkY = _model.Bounds.Bottom + 4;
+
+            Rectangle probe = new Rectangle(checkX, checkY, 4, 4);
+
+            foreach (var tile in _colliders)
+            {
+                if (probe.Intersects(tile))
+                    return true;
+            }
+
+            return false;
         }
     }
 }

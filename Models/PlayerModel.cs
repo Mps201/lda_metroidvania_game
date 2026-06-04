@@ -185,5 +185,10 @@ namespace lda.Models
                 _ => AttackHitbox
             };
         }
+
+        public void SetWorldColliders(List<Rectangle> colliders)
+        {
+            _colliders = colliders;
+        }
     }
 }

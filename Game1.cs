@@ -16,6 +16,13 @@ namespace lda;
 
 public class Game1 : Game
 {
+    private GameState _currentState = GameState.Title;
+    private SpriteFont _font;
+
+    private Dictionary<string, LevelConfig> _levelConfigs;
+    private string _currentLevelId;
+    private List<ExitZone> _activeExits;
+
     private GraphicsDeviceManager _graphics;
     private SpriteBatch _spriteBatch;
     
@@ -56,38 +63,82 @@ public class Game1 : Game
 
     protected override void Initialize()
     {
-        Console.WriteLine(">>> [Game1] Initialize started...");
-
         _graphics.ApplyChanges();
         _inputHandler = new InputHandler();
         _gameObjects = new List<GameObject>();
 
-        int[,] levelData = new int[25, 33];
-
-        for (int x = 0; x < 33; x++)
-            levelData[18, x] = 1;
-
-        levelData[14, 5] = 1;
-        levelData[14, 6] = 1;
-        levelData[14, 7] = 1;
-        
-        levelData[10, 20] = 1;
-        levelData[10, 21] = 1;
-        levelData[10, 22] = 1;
-        levelData[10, 23] = 1;
-        
-        levelData[16, 25] = 1;
-        levelData[16, 26] = 1;
-        levelData[16, 27] = 1;
-        
-        _tileMap = new TileMap(levelData, 32);
-
-        int levelWidth = 33 * 32;
-        int levelHeight = 25 * 32;
-        _camera = new Camera(levelWidth, levelHeight, _graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight);
-        
-        Console.WriteLine(">>> [Game1] Initialize finished.");
+        SetupLevels();
         base.Initialize();
+    }
+
+    private void SetupLevels()
+    {
+        _levelConfigs = new Dictionary<string, LevelConfig>();
+        _activeExits = new List<ExitZone>();
+
+        //lvl1
+        int[,] lvl1Data = new int[25, 33];
+        for (int x = 0; x < 33; x++) lvl1Data[18, x] = 1; // Пол
+        lvl1Data[14, 5] = 1; lvl1Data[14, 6] = 1; lvl1Data[14, 7] = 1;
+        lvl1Data[10, 20] = 1; lvl1Data[10, 21] = 1; lvl1Data[10, 22] = 1; lvl1Data[10, 23] = 1;
+        lvl1Data[16, 25] = 1; lvl1Data[16, 26] = 1; lvl1Data[16, 27] = 1;
+
+        _levelConfigs["level_1"] = new LevelConfig
+        {
+            Id = "level_1",
+            TileData = lvl1Data,
+            PlayerSpawn = new Vector2(100, 400),
+            EnemySpawns = { new Vector2(400, 500), new Vector2(600, 500) },
+            Exits = {
+                new ExitZone { Bounds = new Rectangle(1000, 480, 32, 96), TargetLevelId = "level_2", TargetSpawn = new Vector2(100, 500) }
+            }
+        };
+
+        //lvl2
+        int[,] lvl2Data = new int[25, 33];
+        for (int x = 0; x < 33; x++) lvl2Data[20, x] = 1; // Пол ниже
+        lvl2Data[16, 8] = 1; lvl2Data[16, 9] = 1; lvl2Data[16, 10] = 1;
+        lvl2Data[12, 20] = 1; lvl2Data[12, 21] = 1; lvl2Data[12, 22] = 1;
+
+        _levelConfigs["level_2"] = new LevelConfig
+        {
+            Id = "level_2",
+            TileData = lvl2Data,
+            PlayerSpawn = new Vector2(100, 500),
+            EnemySpawns = { new Vector2(300, 550), new Vector2(700, 400) },
+            Exits = {
+                new ExitZone { Bounds = new Rectangle(50, 480, 32, 96), TargetLevelId = "level_1", TargetSpawn = new Vector2(900, 500) }
+            }
+        };
+    }
+
+    private void LoadLevel(string levelId)
+    {
+        if (!_levelConfigs.TryGetValue(levelId, out var config)) return;
+
+        _currentLevelId = levelId;
+        _activeExits = new List<ExitZone>(config.Exits);
+
+        _tileMap = new TileMap(config.TileData, 32);
+        _playerModel.SetWorldColliders(_tileMap.SolidTiles);
+
+        _playerModel.RespawnPoint = config.PlayerSpawn;
+        _playerModel.Reset();
+
+        _enemyModels.Clear();
+        _enemyControllers.Clear();
+        _enemyViews.Clear();
+        _checkpoints.Clear();
+
+        foreach (var pos in config.EnemySpawns)
+        {
+            AddEnemy(pos);
+        }
+
+        var cp = new Checkpoint(config.PlayerSpawn + new Vector2(150, 0), _checkpointInactiveTex, _checkpointActiveTex);
+        _checkpoints.Add(cp);
+
+        _camera = new Camera(33 * 32, 25 * 32, _graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight);
     }
 
     protected override void LoadContent()
@@ -96,44 +147,40 @@ public class Game1 : Game
 
         _playerTexture = new Texture2D(GraphicsDevice, 32, 32);
         _playerTexture.SetData(Enumerable.Repeat(Color.White, 32 * 32).ToArray());
-
+        
         _tileTexture = new Texture2D(GraphicsDevice, 32, 32);
         _tileTexture.SetData(Enumerable.Repeat(Color.Green, 32 * 32).ToArray());
-
+        
         _checkpointInactiveTex = new Texture2D(GraphicsDevice, 32, 32);
         _checkpointInactiveTex.SetData(Enumerable.Repeat(Color.White, 32 * 32).ToArray());
-
+        
         _checkpointActiveTex = new Texture2D(GraphicsDevice, 32, 32);
         _checkpointActiveTex.SetData(Enumerable.Repeat(Color.White, 32 * 32).ToArray());
-
-        _playerModel = new PlayerModel(new Vector2(100, 400), _tileMap.SolidTiles);
-        _playerController = new PlayerController(_playerModel, _inputHandler);
-        _playerView = new PlayerView(_playerModel, _playerTexture);
-
-       _enemyModels = new List<EnemyModel>();
-        _enemyControllers = new List<EnemyController>();
-        _enemyViews = new List<EnemyView>();
-
-        AddEnemy(new Vector2(400, 500));
-        AddEnemy(new Vector2(600, 544));
-
-        _checkpoints = new List<Checkpoint>();
-        var cp1 = new Checkpoint(new Vector2(100, 544), _checkpointInactiveTex, _checkpointActiveTex); // На полу (ряд 18 = 576px, чуть выше)
-        _checkpoints.Add(cp1);
         
-        var cp2 = new Checkpoint(new Vector2(800, 544), _checkpointInactiveTex, _checkpointActiveTex);
-        _checkpoints.Add(cp2);
-
         _heartTexture = new Texture2D(GraphicsDevice, 1, 1);
         _heartTexture.SetData(new Color[] { Color.White });
 
+        _playerModel = new PlayerModel(new Vector2(100, 400), new List<Rectangle>()); // Временные коллайдеры
+        _playerController = new PlayerController(_playerModel, _inputHandler);
+        _playerView = new PlayerView(_playerModel, _playerTexture);
+
+        _enemyModels = new List<EnemyModel>();
+        _enemyControllers = new List<EnemyController>();
+        _enemyViews = new List<EnemyView>();
+        _checkpoints = new List<Checkpoint>();
+
         _healthBar = new HealthBarView(_playerModel, _heartTexture);
+
+        // try { _font = Content.Load<SpriteFont>("Fonts/Default"); } catch { }
+
+        LoadLevel("level_1");
     }
 
     private void AddEnemy(Vector2 position)
     {
         var model = new EnemyModel(position, _tileMap.SolidTiles);
-        var controller = new EnemyController(model, _playerModel);
+        var controller = new EnemyController(model, _playerModel, _tileMap.SolidTiles); 
+        
         var view = new EnemyView(model, _playerTexture);
 
         _enemyModels.Add(model);
@@ -143,10 +190,32 @@ public class Game1 : Game
 
     protected override void Update(GameTime gameTime)
     {
-        if (Keyboard.GetState().IsKeyDown(Keys.Escape))
-            Exit();
-        
         _inputHandler.Update();
+
+        if (_currentState == GameState.Title)
+        {
+            if (_inputHandler.IsKeyPressed(Keys.Enter) || _inputHandler.IsKeyPressed(Keys.Space))
+            {
+                _currentState = GameState.Playing;
+                LoadLevel("level_1");
+            }
+            base.Update(gameTime);
+            return;
+        }
+
+        if (_inputHandler.IsKeyPressed(Keys.Escape))
+        {
+            if (_currentState == GameState.Playing)
+                _currentState = GameState.Paused;
+            else if (_currentState == GameState.Paused)
+                _currentState = GameState.Playing;
+        }
+
+        if (_currentState == GameState.Paused)
+        {
+            base.Update(gameTime);
+            return;
+        }
 
         _playerController.Update();
         _playerModel.Update(gameTime);
@@ -188,6 +257,15 @@ public class Game1 : Game
         {
             cp.Update(_playerModel);
         }
+
+        foreach (var exit in _activeExits)
+        {
+            if (_playerModel.Bounds.Intersects(exit.Bounds))
+            {
+                LoadLevel(exit.TargetLevelId);
+                break;
+            }
+        }
         
         base.Update(gameTime);
     }
@@ -205,11 +283,18 @@ public class Game1 : Game
     protected override void Draw(GameTime gameTime)
     {
         GraphicsDevice.Clear(Color.CornflowerBlue);
-        
+
+        if (_currentState == GameState.Title)
+        {
+            _spriteBatch.Begin();
+            DrawTitleScreen(_spriteBatch, gameTime);
+            _spriteBatch.End();
+            return;
+        }
+
         _spriteBatch.Begin(transformMatrix: _camera.GetViewMatrix());
         
         _tileMap.Draw(_spriteBatch, _tileTexture);
-
         _playerView.Draw(_spriteBatch, gameTime);
 
         foreach (var view in _enemyViews)
@@ -220,13 +305,55 @@ public class Game1 : Game
 
         foreach (var cp in _checkpoints)
             cp.Draw(_spriteBatch);
+
+        foreach (var exit in _activeExits)
+        {
+            _spriteBatch.Draw(_tileTexture, exit.Bounds, Color.Cyan * 0.3f);
+        }
         
         _spriteBatch.End();
+
         _spriteBatch.Begin();
+        
         _healthBar.Draw(_spriteBatch);
 
+        if (_currentState == GameState.Paused)
+        {
+            DrawPauseOverlay(_spriteBatch, gameTime);
+        }
+        
         _spriteBatch.End();
         
         base.Draw(gameTime);
+    }
+
+    private void DrawTitleScreen(SpriteBatch sb, GameTime gameTime)
+    {
+        sb.Draw(_playerTexture, new Rectangle(0, 0, 800, 600), Color.Black);
+        
+        if (_font != null)
+        {
+            sb.DrawString(_font, "MY METROIDVANIA", new Vector2(180, 150), Color.White, 0, Vector2.Zero, 2f, SpriteEffects.None, 0);
+            sb.DrawString(_font, "2D Platformer with MVC Architecture", new Vector2(120, 250), Color.LightGray, 0, Vector2.Zero, 1f, SpriteEffects.None, 0);
+            
+            string hint = "Press [ENTER] or [SPACE] to Start";
+
+            Color hintColor = (int)(gameTime.TotalGameTime.TotalMilliseconds / 500) % 2 == 0 ? Color.Yellow : Color.White;
+            sb.DrawString(_font, hint, new Vector2(200, 400), hintColor, 0, Vector2.Zero, 1.2f, SpriteEffects.None, 0);
+            
+            sb.DrawString(_font, "Controls:", new Vector2(300, 480), Color.Gray, 0, Vector2.Zero, 1f, SpriteEffects.None, 0);
+            sb.DrawString(_font, "WASD - Move | SPACE - Jump | J - Attack | ESC - Pause", new Vector2(100, 510), Color.Gray, 0, Vector2.Zero, 0.9f, SpriteEffects.None, 0);
+        }
+    }
+
+    private void DrawPauseOverlay(SpriteBatch sb, GameTime gameTime)
+    {
+        sb.Draw(_playerTexture, new Rectangle(0, 0, 800, 600), Color.Black * 0.7f);
+        
+        if (_font != null)
+        {
+            sb.DrawString(_font, "PAUSED", new Vector2(320, 250), Color.White, 0, Vector2.Zero, 2f, SpriteEffects.None, 0);
+            sb.DrawString(_font, "Press [ESC] to Resume", new Vector2(260, 320), Color.Yellow, 0, Vector2.Zero, 1f, SpriteEffects.None, 0);
+        }
     }
 }
